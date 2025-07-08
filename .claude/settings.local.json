@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(cmake:*)",
+      "Bash(make:*)",
+      "Bash(brew:*)",
+      "Bash(rm:*)",
+      "Bash(g++:*)",
+      "Bash(./simple_typing_test)",
+      "Bash(export:*)",
+      "Bash(CMAKE_PREFIX_PATH=\"/opt/homebrew/opt/qt@5:/opt/homebrew/opt/qt\" cmake ..)",
+      "Bash(./TypingSpeedTest)"
+    ],
+    "deny": []
+  }
+}
