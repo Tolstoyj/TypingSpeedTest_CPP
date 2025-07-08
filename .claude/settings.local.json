@@ -10,7 +10,15 @@
       "Bash(./simple_typing_test)",
       "Bash(export:*)",
       "Bash(CMAKE_PREFIX_PATH=\"/opt/homebrew/opt/qt@5:/opt/homebrew/opt/qt\" cmake ..)",
-      "Bash(./TypingSpeedTest)"
+      "Bash(./TypingSpeedTest)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(ls:*)",
+      "Bash(mv:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

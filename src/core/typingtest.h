@@ -8,7 +8,7 @@
 #include <QStringList>
 #include <QElapsedTimer>
 #include <QRandomGenerator>
-#include "lessonmanager.h"
+#include "../managers/lessonmanager.h"
 
 class TypingTest : public QObject
 {

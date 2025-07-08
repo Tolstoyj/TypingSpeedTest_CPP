@@ -30,9 +30,10 @@
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QSlider>
-#include "statisticsmanager.h"
-#include "lessonmanager.h"
-#include "soundmanager.h"
+#include "../managers/statisticsmanager.h"
+#include "../managers/lessonmanager.h"
+#include "../managers/soundmanager.h"
+#include "../managers/thememanager.h"
 
 class TypingTest;
 
@@ -58,7 +59,13 @@ private slots:
     void onSoundToggled(bool enabled);
     void onKeystrokeSoundToggled(bool enabled);
     void onVolumeChanged(int value);
+    void onThemeChanged(int index);
+    void onFontFamilyChanged(const QString &family);
+    void onFontSizeChanged(int size);
+    void onHighContrastToggled(bool enabled);
+    void onLargeTextToggled(bool enabled);
     void showUserStats();
+    void applyCurrentTheme();
 
 private:
     void setupUI();
@@ -92,6 +99,15 @@ private:
     QSlider *volumeSlider;
     QLabel *volumeLabel;
     
+    QComboBox *themeCombo;
+    QLabel *themeLabel;
+    QComboBox *fontFamilyCombo;
+    QLabel *fontFamilyLabel;
+    QComboBox *fontSizeCombo;
+    QLabel *fontSizeLabel;
+    QCheckBox *highContrastCheckBox;
+    QCheckBox *largeTextCheckBox;
+    
     QComboBox *userCombo;
     QLabel *userLabel;
     QPushButton *statsButton;
@@ -105,6 +121,7 @@ private:
     StatisticsManager *statsManager;
     LessonManager *lessonManager;
     SoundManager *soundManager;
+    ThemeManager *themeManager;
     QString currentUser;
 };
 

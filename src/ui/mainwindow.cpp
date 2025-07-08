@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-#include "typingtest.h"
+#include "../core/typingtest.h"
 #include <QScreen>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
     , statsManager(nullptr)
     , lessonManager(nullptr)
     , soundManager(nullptr)
+    , themeManager(nullptr)
     , currentUser("Guest")
 {
     setupUI();
@@ -21,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     
     lessonManager = new LessonManager(this);
     soundManager = new SoundManager(this);
+    themeManager = new ThemeManager(this);
     typingTest = new TypingTest(this);
     
     connect(typingTest, &TypingTest::statsUpdated, this, &MainWindow::updateStats);
@@ -36,6 +38,13 @@ MainWindow::MainWindow(QWidget *parent)
     connect(soundEnabledCheckBox, &QCheckBox::toggled, this, &MainWindow::onSoundToggled);
     connect(keystrokeSoundCheckBox, &QCheckBox::toggled, this, &MainWindow::onKeystrokeSoundToggled);
     connect(volumeSlider, &QSlider::valueChanged, this, &MainWindow::onVolumeChanged);
+    connect(themeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onThemeChanged);
+    connect(fontFamilyCombo, QOverload<const QString&>::of(&QComboBox::currentTextChanged), this, &MainWindow::onFontFamilyChanged);
+    connect(fontSizeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onFontSizeChanged);
+    connect(highContrastCheckBox, &QCheckBox::toggled, this, &MainWindow::onHighContrastToggled);
+    connect(largeTextCheckBox, &QCheckBox::toggled, this, &MainWindow::onLargeTextToggled);
+    connect(themeManager, &ThemeManager::themeChanged, this, &MainWindow::applyCurrentTheme);
+    connect(themeManager, &ThemeManager::fontChanged, this, &MainWindow::applyCurrentTheme);
     connect(userCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onUserChanged);
     connect(statsButton, &QPushButton::clicked, this, &MainWindow::showUserStats);
     
@@ -49,6 +58,25 @@ MainWindow::MainWindow(QWidget *parent)
     userCombo->clear();
     userCombo->addItems(users);
     userCombo->setCurrentText("Guest");
+    
+    // Initialize theme controls with current settings
+    themeCombo->setCurrentIndex(static_cast<int>(themeManager->getCurrentTheme()));
+    fontFamilyCombo->setCurrentText(themeManager->getFontFamily());
+    
+    // Find the matching font size index
+    int currentSize = themeManager->getFontSize();
+    for (int i = 0; i < fontSizeCombo->count(); ++i) {
+        if (fontSizeCombo->itemData(i).toInt() == currentSize) {
+            fontSizeCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+    
+    highContrastCheckBox->setChecked(themeManager->isHighContrastMode());
+    largeTextCheckBox->setChecked(themeManager->isLargeTextMode());
+    
+    // Apply the initial theme
+    applyCurrentTheme();
     
     setWindowTitle("Typing Speed Test");
     resize(800, 600);
@@ -221,6 +249,53 @@ void MainWindow::setupUI()
     audioLayout->addStretch();
     
     mainLayout->addLayout(audioLayout);
+    
+    // Theme controls layout
+    QHBoxLayout *themeLayout = new QHBoxLayout();
+    themeLayout->setSpacing(15);
+    
+    themeLabel = new QLabel("Theme:", this);
+    themeCombo = new QComboBox(this);
+    themeCombo->addItem("Light", static_cast<int>(ThemeManager::LIGHT_THEME));
+    themeCombo->addItem("Dark", static_cast<int>(ThemeManager::DARK_THEME));
+    themeCombo->addItem("High Contrast", static_cast<int>(ThemeManager::HIGH_CONTRAST_THEME));
+    
+    fontFamilyLabel = new QLabel("Font:", this);
+    fontFamilyCombo = new QComboBox(this);
+    fontFamilyCombo->addItems({"Arial", "Helvetica", "Times", "Courier", "Verdana", "Georgia"});
+    fontFamilyCombo->setCurrentText("Arial");
+    
+    fontSizeLabel = new QLabel("Size:", this);
+    fontSizeCombo = new QComboBox(this);
+    fontSizeCombo->addItem("Small", static_cast<int>(ThemeManager::SMALL_FONT));
+    fontSizeCombo->addItem("Medium", static_cast<int>(ThemeManager::MEDIUM_FONT));
+    fontSizeCombo->addItem("Large", static_cast<int>(ThemeManager::LARGE_FONT));
+    fontSizeCombo->addItem("Extra Large", static_cast<int>(ThemeManager::EXTRA_LARGE_FONT));
+    fontSizeCombo->addItem("Huge", static_cast<int>(ThemeManager::HUGE_FONT));
+    fontSizeCombo->setCurrentIndex(1); // Medium
+    
+    themeLayout->addWidget(themeLabel);
+    themeLayout->addWidget(themeCombo);
+    themeLayout->addWidget(fontFamilyLabel);
+    themeLayout->addWidget(fontFamilyCombo);
+    themeLayout->addWidget(fontSizeLabel);
+    themeLayout->addWidget(fontSizeCombo);
+    themeLayout->addStretch();
+    
+    mainLayout->addLayout(themeLayout);
+    
+    // Accessibility controls layout
+    QHBoxLayout *accessibilityLayout = new QHBoxLayout();
+    accessibilityLayout->setSpacing(15);
+    
+    highContrastCheckBox = new QCheckBox("High Contrast", this);
+    largeTextCheckBox = new QCheckBox("Large Text", this);
+    
+    accessibilityLayout->addWidget(highContrastCheckBox);
+    accessibilityLayout->addWidget(largeTextCheckBox);
+    accessibilityLayout->addStretch();
+    
+    mainLayout->addLayout(accessibilityLayout);
     
     // Stats layout
     statsLayout = new QHBoxLayout();
@@ -400,14 +475,25 @@ void MainWindow::updateTextDisplay()
         if (i < inputText.length()) {
             QChar inputChar = inputText[i];
             if (inputChar == sampleChar) {
-                htmlText += QString("<span style='background-color: #90EE90; color: #000000;'>%1</span>").arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
+                QString bgColor = themeManager ? themeManager->getCorrectTextColor().name() : "#90EE90";
+                QString textColor = themeManager ? themeManager->getCurrentColors().foreground.name() : "#000000";
+                htmlText += QString("<span style='background-color: %1; color: %2;'>%3</span>")
+                           .arg(bgColor).arg(textColor).arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
             } else {
-                htmlText += QString("<span style='background-color: #FFB6C1; color: #8B0000;'>%1</span>").arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
+                QString bgColor = themeManager ? themeManager->getIncorrectTextColor().name() : "#FFB6C1";
+                QString textColor = themeManager ? themeManager->getCurrentColors().foreground.name() : "#8B0000";
+                htmlText += QString("<span style='background-color: %1; color: %2;'>%3</span>")
+                           .arg(bgColor).arg(textColor).arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
             }
         } else if (i == inputText.length()) {
-            htmlText += QString("<span style='background-color: #87CEEB; color: #000000;'>%1</span>").arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
+            QString bgColor = themeManager ? themeManager->getCurrentTextColor().name() : "#87CEEB";
+            QString textColor = themeManager ? themeManager->getCurrentColors().foreground.name() : "#000000";
+            htmlText += QString("<span style='background-color: %1; color: %2;'>%3</span>")
+                       .arg(bgColor).arg(textColor).arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
         } else {
-            htmlText += QString("<span style='color: #696969;'>%1</span>").arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
+            QString textColor = themeManager ? themeManager->getRemainingTextColor().name() : "#696969";
+            htmlText += QString("<span style='color: %1;'>%2</span>")
+                       .arg(textColor).arg(sampleChar.unicode() == ' ' ? "&nbsp;" : QString(sampleChar));
         }
     }
     
@@ -517,6 +603,54 @@ void MainWindow::onVolumeChanged(int value)
         qreal volume = value / 100.0; // Convert 0-100 to 0.0-1.0
         soundManager->setVolume(volume);
     }
+}
+
+void MainWindow::onThemeChanged(int index)
+{
+    if (!themeManager) return;
+    
+    ThemeManager::ThemeType theme = static_cast<ThemeManager::ThemeType>(themeCombo->currentData().toInt());
+    themeManager->applyTheme(theme);
+}
+
+void MainWindow::onFontFamilyChanged(const QString &family)
+{
+    if (!themeManager) return;
+    
+    themeManager->setFontFamily(family);
+}
+
+void MainWindow::onFontSizeChanged(int index)
+{
+    if (!themeManager) return;
+    
+    ThemeManager::FontSize size = static_cast<ThemeManager::FontSize>(fontSizeCombo->currentData().toInt());
+    themeManager->setFontSize(size);
+}
+
+void MainWindow::onHighContrastToggled(bool enabled)
+{
+    if (!themeManager) return;
+    
+    themeManager->setHighContrastMode(enabled);
+}
+
+void MainWindow::onLargeTextToggled(bool enabled)
+{
+    if (!themeManager) return;
+    
+    themeManager->setLargeTextMode(enabled);
+}
+
+void MainWindow::applyCurrentTheme()
+{
+    if (!themeManager) return;
+    
+    // Apply theme to main window
+    themeManager->applyToWidget(this);
+    
+    // Update the color-coded text display with new theme colors
+    updateTextDisplay();
 }
 
 void MainWindow::onUserChanged(int index)

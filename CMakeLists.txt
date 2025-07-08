@@ -16,17 +16,19 @@ endif()
 set(CMAKE_AUTOMOC ON)
 
 add_executable(TypingSpeedTest
-    main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    typingtest.cpp
-    typingtest.h
-    statisticsmanager.cpp
-    statisticsmanager.h
-    lessonmanager.cpp
-    lessonmanager.h
-    soundmanager.cpp
-    soundmanager.h
+    src/main.cpp
+    src/ui/mainwindow.cpp
+    src/ui/mainwindow.h
+    src/core/typingtest.cpp
+    src/core/typingtest.h
+    src/managers/statisticsmanager.cpp
+    src/managers/statisticsmanager.h
+    src/managers/lessonmanager.cpp
+    src/managers/lessonmanager.h
+    src/managers/soundmanager.cpp
+    src/managers/soundmanager.h
+    src/managers/thememanager.cpp
+    src/managers/thememanager.h
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
